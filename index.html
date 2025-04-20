@@ -7,9 +7,9 @@
   <script type="importmap">
     {
       "imports": {
-        "react": "https://cdn.jsdelivr.net/npm/react@18.2.0/+esm",
-        "react-dom": "https://cdn.jsdelivr.net/npm/react-dom@18.2.0/+esm", 
-        "react-router-dom": "https://cdn.jsdelivr.net/npm/react-router-dom@6.14.2/dist/react-router-dom.production.min.js"
+        "react": "https://esm.sh/react@18.2.0",
+        "react-dom": "https://esm.sh/react-dom@18.2.0",
+        "react-router-dom": "https://esm.sh/react-router-dom@6.14.2"
       }
     }
   </script>
@@ -85,7 +85,7 @@
   
   <script type="module">
     import React, { useState, useEffect, useRef } from 'react';
-    import * as ReactDOM from 'react-dom/client';
+    import ReactDOM from 'react-dom/client';
     import { 
       createBrowserRouter, 
       RouterProvider, 
@@ -99,6 +99,78 @@
       useLocation,
       Form
     } from 'react-router-dom';
+    
+    // Mock the WebSim API for demonstration purposes
+    window.websim = {
+      chat: {
+        completions: {
+          create: async ({ messages }) => {
+            // Simulate network delay
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Just a simple mock response
+            const lastMessage = messages.find(m => m.role === "user")?.content;
+            let responseText;
+            
+            if (typeof lastMessage === "string") {
+              responseText = `I received your message about "${lastMessage}", my friend! I'll rhyme a verse, as that's my trend!`;
+            } else {
+              responseText = "I got your message with special content! In rhyming verse, I show my assent!";
+            }
+            
+            // For JSON outputs, we'll just return fixed responses
+            if (messages[0]?.content?.includes("JSON schema")) {
+              if (messages[1]?.content?.[0]?.text?.includes("eggs + fire")) {
+                return { content: '{"concept":"Fried eggs cooking on an open flame","emoji":"🍳"}' };
+              }
+              return { content: '{"concept":"Combined concepts","emoji":"🔄"}' };
+            }
+            
+            // For image analysis
+            if (messages[0]?.content?.[0]?.text?.includes("isPhotograph")) {
+              return { content: '{"isPhotograph":true,"isAnimal":true,"isInNature":true}' };
+            }
+            
+            return {
+              role: "assistant",
+              content: responseText
+            };
+          }
+        }
+      },
+      imageGen: async (options) => {
+        // Simulate network delay
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Return a placeholder image based on the options
+        const seed = options.seed || Math.floor(Math.random() * 1000);
+        const aspectRatio = options.aspect_ratio || "1:1";
+        
+        // Convert aspect ratio to dimensions
+        let imgWidth, imgHeight;
+        if (aspectRatio === "16:9") {
+          imgWidth = 800;
+          imgHeight = 450;
+        } else if (aspectRatio === "9:16") {
+          imgWidth = 450;
+          imgHeight = 800;
+        } else if (aspectRatio === "4:3") {
+          imgWidth = 800;
+          imgHeight = 600;
+        } else if (aspectRatio === "3:4") {
+          imgWidth = 600;
+          imgHeight = 800; 
+        } else {
+          imgWidth = 600;
+          imgHeight = 600;
+        }
+        
+        // Generate a random image URL from Picsum
+        return {
+          url: `https://picsum.photos/seed/${seed}/${imgWidth}/${imgHeight}`
+        };
+      }
+    };
     
     // === AI Chat Demo ===
     function AIChat() {
@@ -169,7 +241,7 @@
             />
             <button onClick={handleSend}>Send</button>
           </div>
-          <p><small>Note: This simulates an AI chat interaction. In this demo, the responses are pre-defined.</small></p>
+          <p><small>This simulates an AI chat interaction with rhyming responses.</small></p>
         </div>
       );
     }
@@ -245,7 +317,7 @@
             {loading && <p>Generating image...</p>}
             {imageUrl && <img src={imageUrl} alt="Generated" style={{ maxWidth: '100%', maxHeight: '300px' }} />}
           </div>
-          <p><small>Note: This simulates image generation. In this demo, the responses are pre-defined.</small></p>
+          <p><small>This simulates random image generation using Lorem Picsum.</small></p>
         </div>
       );
     }
@@ -313,7 +385,7 @@
               <pre>{JSON.stringify(result, null, 2)}</pre>
             </div>
           )}
-          <p><small>Note: This simulates generating structured JSON from an LLM. In this demo, the responses are pre-defined.</small></p>
+          <p><small>This simulates generating structured JSON from an LLM.</small></p>
         </div>
       );
     }
@@ -411,7 +483,7 @@
               )}
             </div>
           </div>
-          <p><small>Note: This simulates analyzing images with AI. In this demo, the responses are pre-defined.</small></p>
+          <p><small>This simulates analyzing images with AI.</small></p>
         </div>
       );
     }
@@ -507,6 +579,19 @@
       );
     }
     
+    // === LLM Demo ===
+    function LlmDemo() {
+      return (
+        <div>
+          <h2>LLM Integration Features</h2>
+          <AIChat />
+          <ImageGeneration />
+          <JsonOutputDemo />
+          <ImageAnalysisDemo />
+        </div>
+      );
+    }
+    
     // Main App Component
     function App() {
       return (
@@ -527,18 +612,6 @@
               <Outlet />
             </div>
           </div>
-        </div>
-      );
-    }
-    
-    function LlmDemo() {
-      return (
-        <div>
-          <h2>LLM Integration Features</h2>
-          <AIChat />
-          <ImageGeneration />
-          <JsonOutputDemo />
-          <ImageAnalysisDemo />
         </div>
       );
     }
@@ -576,80 +649,6 @@
         ]
       }
     ]);
-    
-    // Mock the WebSim API for demonstration purposes
-    window.websim = {
-      chat: {
-        completions: {
-          create: async ({ messages }) => {
-            // Simulate network delay
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            // Just a simple mock response
-            const lastMessage = messages.find(m => m.role === "user")?.content;
-            let responseText;
-            
-            if (typeof lastMessage === "string") {
-              responseText = `I received your message about "${lastMessage}", my friend! I'll rhyme a verse, as that's my trend!`;
-            } else {
-              responseText = "I got your message with special content! In rhyming verse, I show my assent!";
-            }
-            
-            // For JSON outputs, we'll just return fixed responses
-            if (messages[0]?.content?.includes("JSON schema")) {
-              if (messages[1]?.content?.[0]?.text?.includes("eggs + fire")) {
-                return { content: '{"concept":"Fried eggs cooking on an open flame","emoji":"🍳"}' };
-              }
-              return { content: '{"concept":"Combined concepts","emoji":"🔄"}' };
-            }
-            
-            // For image analysis
-            if (messages[0]?.content?.[0]?.text?.includes("isPhotograph")) {
-              return { content: '{"isPhotograph":true,"isAnimal":true,"isInNature":true}' };
-            }
-            
-            return {
-              role: "assistant",
-              content: responseText
-            };
-          }
-        }
-      },
-      imageGen: async (options) => {
-        // Simulate network delay
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        // Return a placeholder image based on the options
-        const seed = options.seed || Math.floor(Math.random() * 1000);
-        const aspectRatio = options.aspect_ratio || "1:1";
-        const width = options.width || 512;
-        const height = options.height || 512;
-        
-        // Convert aspect ratio to dimensions
-        let imgWidth, imgHeight;
-        if (aspectRatio === "16:9") {
-          imgWidth = 800;
-          imgHeight = 450;
-        } else if (aspectRatio === "9:16") {
-          imgWidth = 450;
-          imgHeight = 800;
-        } else if (aspectRatio === "4:3") {
-          imgWidth = 800;
-          imgHeight = 600;
-        } else if (aspectRatio === "3:4") {
-          imgWidth = 600;
-          imgHeight = 800; 
-        } else {
-          imgWidth = 600;
-          imgHeight = 600;
-        }
-        
-        // Generate a random image URL from Picsum
-        return {
-          url: `https://picsum.photos/seed/${seed}/${imgWidth}/${imgHeight}`
-        };
-      }
-    };
     
     // Update the rendering method to ensure it works with React 18
     const root = ReactDOM.createRoot(document.getElementById('root'));
