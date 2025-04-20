@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>React Router/React DOM Feature Demo</title>
+  <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18.3.1",
+        "react-dom": "https://esm.sh/react-dom@18.3.1",
+        "react-router-dom": "https://esm.sh/react-router-dom@6.28.0"
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    
+    .nav {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      background: #f5f5f5;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    
+    .section {
+      margin-bottom: 30px;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    
+    h1, h2, h3 {
+      color: #333;
+    }
+    
+    .active {
+      font-weight: bold;
+      color: #0066cc;
+    }
+    
+    button, input[type="submit"] {
+      background: #0066cc;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    
+    input, select {
+      padding: 8px;
+      margin-right: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    
+    .pending {
+      opacity: 0.7;
+    }
+    
+    .card {
+      border: 1px solid #ddd;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+    
+    .transitioning {
+      color: orange;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  
+  <script type="module">
+    import React, { useState, useEffect, useRef } from 'react';
+    import ReactDOM from 'react-dom';
+    import { 
+      createBrowserRouter, 
+      RouterProvider, 
+      Route, 
+      Link, 
+      NavLink, 
+      Outlet, 
+      useNavigate, 
+      useParams, 
+      useSearchParams, 
+      useLocation,
+      Form
+    } from 'react-router-dom';
+    
+    // === AI Chat Demo ===
+    function AIChat() {
+      const [messages, setMessages] = useState([]);
+      const [input, setInput] = useState('');
+      const [loading, setLoading] = useState(false);
+      
+      const handleSend = async () => {
+        if (!input.trim()) return;
+        
+        const newMessage = {
+          role: "user",
+          content: input
+        };
+        
+        setMessages(prev => [...prev, newMessage]);
+        setInput('');
+        setLoading(true);
+        
+        try {
+          const conversationHistory = [...messages, newMessage].slice(-10);
+          
+          const completion = await websim.chat.completions.create({
+            messages: [
+              {
+                role: "system",
+                content: "You are a friendly assistant who speaks in rhyming verse."
+              },
+              ...conversationHistory,
+            ],
+          });
+          
+          setMessages(prev => [...prev, completion]);
+        } catch (error) {
+          console.error("Error with AI chat:", error);
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      return (
+        <div className="section">
+          <h2>AI Chat Demo</h2>
+          <div style={{ height: '200px', overflowY: 'auto', border: '1px solid #ddd', padding: '10px', marginBottom: '10px' }}>
+            {messages.map((msg, idx) => (
+              <div key={idx} style={{ 
+                textAlign: msg.role === 'user' ? 'right' : 'left',
+                margin: '5px 0',
+                padding: '8px 12px',
+                background: msg.role === 'user' ? '#e1f5fe' : '#f5f5f5',
+                borderRadius: '8px',
+                display: 'inline-block',
+                maxWidth: '80%'
+              }}>
+                {msg.content}
+              </div>
+            ))}
+            {loading && <div style={{ textAlign: 'center' }}>Thinking...</div>}
+          </div>
+          <div style={{ display: 'flex' }}>
+            <input 
+              type="text" 
+              value={input} 
+              onChange={e => setInput(e.target.value)}
+              onKeyPress={e => e.key === 'Enter' && handleSend()}
+              placeholder="Type a message..." 
+              style={{ flexGrow: 1 }}
+            />
+            <button onClick={handleSend}>Send</button>
+          </div>
+          <p><small>Note: This simulates an AI chat interaction. In this demo, the responses are pre-defined.</small></p>
+        </div>
+      );
+    }
+    
+    // === Image Generation Demo ===
+    function ImageGeneration() {
+      const [prompt, setPrompt] = useState("A crayon child's drawing of a turtle");
+      const [aspectRatio, setAspectRatio] = useState("1:1");
+      const [seed, setSeed] = useState("");
+      const [imageUrl, setImageUrl] = useState("");
+      const [loading, setLoading] = useState(false);
+      
+      const generateImage = async () => {
+        setLoading(true);
+        try {
+          const options = {
+            prompt: prompt
+          };
+          
+          if (aspectRatio !== "1:1") {
+            options.aspect_ratio = aspectRatio;
+          }
+          
+          if (seed) {
+            options.seed = parseInt(seed);
+          }
+          
+          const result = await websim.imageGen(options);
+          setImageUrl(result?.url || "");
+        } catch (error) {
+          console.error("Error generating image:", error);
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      return (
+        <div className="section">
+          <h2>Image Generation Demo</h2>
+          <div style={{ marginBottom: '15px' }}>
+            <div>
+              <label>Prompt:</label>
+              <input 
+                type="text" 
+                value={prompt} 
+                onChange={e => setPrompt(e.target.value)}
+                style={{ width: '100%', marginTop: '5px' }}
+              />
+            </div>
+            <div style={{ marginTop: '10px' }}>
+              <label>Aspect Ratio:</label>
+              <select value={aspectRatio} onChange={e => setAspectRatio(e.target.value)}>
+                <option value="1:1">1:1 (Square)</option>
+                <option value="16:9">16:9 (Landscape)</option>
+                <option value="9:16">9:16 (Portrait)</option>
+                <option value="4:3">4:3</option>
+                <option value="3:4">3:4</option>
+              </select>
+            </div>
+            <div style={{ marginTop: '10px' }}>
+              <label>Seed (optional):</label>
+              <input 
+                type="number" 
+                value={seed} 
+                onChange={e => setSeed(e.target.value)}
+                placeholder="For consistent results"
+              />
+            </div>
+            <button onClick={generateImage} style={{ marginTop: '10px' }}>Generate Image</button>
+          </div>
+          
+          <div style={{ textAlign: 'center' }}>
+            {loading && <p>Generating image...</p>}
+            {imageUrl && <img src={imageUrl} alt="Generated" style={{ maxWidth: '100%', maxHeight: '300px' }} />}
+          </div>
+          <p><small>Note: This simulates image generation. In this demo, the responses are pre-defined.</small></p>
+        </div>
+      );
+    }
+    
+    // === JSON Output Demo ===
+    function JsonOutputDemo() {
+      const [input, setInput] = useState("eggs + fire");
+      const [result, setResult] = useState(null);
+      const [loading, setLoading] = useState(false);
+      
+      const handleSubmit = async () => {
+        setLoading(true);
+        try {
+          const completion = await websim.chat.completions.create({
+            messages: [
+              {
+                role: "system",
+                content: `Combine the following concepts into a single, coherent idea.
+                Respond directly with JSON, following this JSON schema, and no other text.
+                {
+                  concept: string;
+                  emoji: string;
+                }
+                `,
+              },
+              {
+                role: "user",
+                content: [
+                  { type: "text", text: input },
+                ]
+              }
+            ],
+            json: true,
+          });
+      
+          const result = JSON.parse(completion.content);
+          setResult(result);
+        } catch (error) {
+          console.error("Error with JSON output:", error);
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      return (
+        <div className="section">
+          <h2>JSON Output Demo</h2>
+          <div>
+            <input 
+              type="text" 
+              value={input} 
+              onChange={e => setInput(e.target.value)}
+              placeholder="Enter concepts to combine"
+              style={{ width: '60%' }}
+            />
+            <button onClick={handleSubmit}>Get JSON Response</button>
+          </div>
+          
+          {loading && <p>Loading...</p>}
+          
+          {result && (
+            <div className="card">
+              <h3>Concept: {result.concept}</h3>
+              <p>Emoji: {result.emoji}</p>
+              <pre>{JSON.stringify(result, null, 2)}</pre>
+            </div>
+          )}
+          <p><small>Note: This simulates generating structured JSON from an LLM. In this demo, the responses are pre-defined.</small></p>
+        </div>
+      );
+    }
+    
+    // === Image Input + JSON Output Demo ===
+    function ImageAnalysisDemo() {
+      const [imageUrl, setImageUrl] = useState("");
+      const [result, setResult] = useState(null);
+      const [loading, setLoading] = useState(false);
+      const fileInputRef = useRef(null);
+      
+      const handleFileChange = (e) => {
+        if (e.target.files && e.target.files[0]) {
+          const file = e.target.files[0];
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            setImageUrl(event.target.result);
+          };
+          reader.readAsDataURL(file);
+        }
+      };
+      
+      const analyzeImage = async () => {
+        if (!imageUrl) return;
+        
+        setLoading(true);
+        try {
+          const completion = await websim.chat.completions.create({
+            messages: [
+              {
+                role: "user",
+                content: [
+                  {
+                    type: "text",
+                    text: `Determine if the image is a natural photograph of an animal.
+                    Respond directly with JSON, following this JSON schema, and no other text.
+                    {
+                      isPhotograph: boolean;
+                      isAnimal: boolean;
+                      isInNature: boolean;
+                    }`,
+                  },
+                  {
+                    type: "image_url",
+                    image_url: { url: imageUrl },
+                  },
+                ],
+              },
+            ],
+            json: true,
+          });
+          
+          const result = JSON.parse(completion.content);
+          setResult(result);
+        } catch (error) {
+          console.error("Error analyzing image:", error);
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      return (
+        <div className="section">
+          <h2>Image Analysis Demo</h2>
+          <div>
+            <input 
+              type="file" 
+              ref={fileInputRef}
+              onChange={handleFileChange} 
+              accept="image/*" 
+              style={{ display: 'none' }}
+            />
+            <button onClick={() => fileInputRef.current.click()}>Select Image</button>
+            <button onClick={analyzeImage} disabled={!imageUrl}>Analyze Image</button>
+          </div>
+          
+          <div style={{ display: 'flex', marginTop: '15px', gap: '20px' }}>
+            <div style={{ flex: 1 }}>
+              {imageUrl && (
+                <img src={imageUrl} alt="Selected" style={{ maxWidth: '100%', maxHeight: '200px' }} />
+              )}
+            </div>
+            
+            <div style={{ flex: 1 }}>
+              {loading && <p>Analyzing image...</p>}
+              
+              {result && (
+                <div className="card">
+                  <h3>Analysis Results:</h3>
+                  <p>Is a photograph: {result.isPhotograph ? "Yes" : "No"}</p>
+                  <p>Contains an animal: {result.isAnimal ? "Yes" : "No"}</p>
+                  <p>Set in nature: {result.isInNature ? "Yes" : "No"}</p>
+                  <pre>{JSON.stringify(result, null, 2)}</pre>
+                </div>
+              )}
+            </div>
+          </div>
+          <p><small>Note: This simulates analyzing images with AI. In this demo, the responses are pre-defined.</small></p>
+        </div>
+      );
+    }
+    
+    // === React Router Demo ===
+    function Home() {
+      return (
+        <div className="section">
+          <h2>React Router Demo</h2>
+          <p>This demonstrates the NavLink component from React Router DOM.</p>
+          <p>Try clicking the links below to navigate between routes.</p>
+          <nav className="nav">
+            <NavLink to="/" style={({isActive}) => isActive ? {fontWeight: 'bold'} : undefined}>Home</NavLink>
+            <NavLink to="/about" style={({isActive}) => isActive ? {fontWeight: 'bold'} : undefined}>About</NavLink>
+            <NavLink to="/users/123" style={({isActive}) => isActive ? {fontWeight: 'bold'} : undefined}>User Profile</NavLink>
+            <NavLink to="/search?q=react" style={({isActive}) => isActive ? {fontWeight: 'bold'} : undefined}>Search</NavLink>
+          </nav>
+          <Outlet />
+        </div>
+      );
+    }
+    
+    function About() {
+      return <div className="card"><h3>About Page</h3><p>This is the about page.</p></div>;
+    }
+    
+    function UserProfile() {
+      const params = useParams();
+      return (
+        <div className="card">
+          <h3>User Profile</h3>
+          <p>User ID: {params.id}</p>
+        </div>
+      );
+    }
+    
+    function Search() {
+      const [searchParams, setSearchParams] = useSearchParams();
+      const query = searchParams.get('q') || '';
+      
+      return (
+        <div className="card">
+          <h3>Search Page</h3>
+          <p>Search query: {query}</p>
+          <input 
+            type="text" 
+            value={query} 
+            onChange={e => {
+              setSearchParams({q: e.target.value});
+            }}
+          />
+        </div>
+      );
+    }
+    
+    // === Form Demo ===
+    function FormDemo() {
+      const navigate = useNavigate();
+      
+      const handleSubmit = (event) => {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        const data = Object.fromEntries(formData);
+        alert(`Form submitted with: ${JSON.stringify(data)}`);
+        // In a real app, you might navigate after submit
+        // navigate('/success');
+      };
+      
+      return (
+        <div className="section">
+          <h2>Form Handling Demo</h2>
+          <p>This demonstrates the Form component from React Router DOM.</p>
+          
+          <Form method="post" onSubmit={handleSubmit}>
+            <div style={{ marginBottom: '10px' }}>
+              <label htmlFor="name">Name:</label>
+              <input type="text" id="name" name="name" required />
+            </div>
+            
+            <div style={{ marginBottom: '10px' }}>
+              <label htmlFor="email">Email:</label>
+              <input type="email" id="email" name="email" required />
+            </div>
+            
+            <div style={{ marginBottom: '10px' }}>
+              <label htmlFor="message">Message:</label>
+              <textarea id="message" name="message" rows="3" style={{ width: '100%' }}></textarea>
+            </div>
+            
+            <button type="submit">Submit Form</button>
+          </Form>
+        </div>
+      );
+    }
+    
+    // Main App Component
+    function App() {
+      return (
+        <div>
+          <h1>React Router and React DOM Demo</h1>
+          <p>This page demonstrates various features from React Router DOM and React DOM libraries.</p>
+          
+          <div className="section">
+            <h2>Navigation Demo</h2>
+            <nav className="nav">
+              <NavLink to="/">Home</NavLink>
+              <NavLink to="/about">About</NavLink>
+              <NavLink to="/llm-demo">LLM Features</NavLink>
+              <NavLink to="/form-demo">Form Demo</NavLink>
+            </nav>
+            
+            <div style={{ marginTop: '20px' }}>
+              <Outlet />
+            </div>
+          </div>
+        </div>
+      );
+    }
+    
+    function LlmDemo() {
+      return (
+        <div>
+          <h2>LLM Integration Features</h2>
+          <AIChat />
+          <ImageGeneration />
+          <JsonOutputDemo />
+          <ImageAnalysisDemo />
+        </div>
+      );
+    }
+    
+    // Define Routes
+    const router = createBrowserRouter([
+      {
+        path: "/",
+        element: <App />,
+        children: [
+          {
+            index: true,
+            element: <Home />
+          },
+          {
+            path: "about",
+            element: <About />
+          },
+          {
+            path: "users/:id",
+            element: <UserProfile />
+          },
+          {
+            path: "search",
+            element: <Search />
+          },
+          {
+            path: "llm-demo",
+            element: <LlmDemo />
+          },
+          {
+            path: "form-demo",
+            element: <FormDemo />
+          }
+        ]
+      }
+    ]);
+    
+    // Mock the WebSim API for demonstration purposes
+    window.websim = {
+      chat: {
+        completions: {
+          create: async ({ messages }) => {
+            // Simulate network delay
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Just a simple mock response
+            const lastMessage = messages.find(m => m.role === "user")?.content;
+            let responseText;
+            
+            if (typeof lastMessage === "string") {
+              responseText = `I received your message about "${lastMessage}", my friend! I'll rhyme a verse, as that's my trend!`;
+            } else {
+              responseText = "I got your message with special content! In rhyming verse, I show my assent!";
+            }
+            
+            // For JSON outputs, we'll just return fixed responses
+            if (messages[0]?.content?.includes("JSON schema")) {
+              if (messages[1]?.content?.[0]?.text?.includes("eggs + fire")) {
+                return { content: '{"concept":"Fried eggs cooking on an open flame","emoji":"🍳"}' };
+              }
+              return { content: '{"concept":"Combined concepts","emoji":"🔄"}' };
+            }
+            
+            // For image analysis
+            if (messages[0]?.content?.[0]?.text?.includes("isPhotograph")) {
+              return { content: '{"isPhotograph":true,"isAnimal":true,"isInNature":true}' };
+            }
+            
+            return {
+              role: "assistant",
+              content: responseText
+            };
+          }
+        }
+      },
+      imageGen: async (options) => {
+        // Simulate network delay
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Return a placeholder image based on the options
+        const seed = options.seed || Math.floor(Math.random() * 1000);
+        const aspectRatio = options.aspect_ratio || "1:1";
+        const width = options.width || 512;
+        const height = options.height || 512;
+        
+        // Convert aspect ratio to dimensions
+        let imgWidth, imgHeight;
+        if (aspectRatio === "16:9") {
+          imgWidth = 800;
+          imgHeight = 450;
+        } else if (aspectRatio === "9:16") {
+          imgWidth = 450;
+          imgHeight = 800;
+        } else if (aspectRatio === "4:3") {
+          imgWidth = 800;
+          imgHeight = 600;
+        } else if (aspectRatio === "3:4") {
+          imgWidth = 600;
+          imgHeight = 800; 
+        } else {
+          imgWidth = 600;
+          imgHeight = 600;
+        }
+        
+        // Generate a random image URL from Picsum
+        return {
+          url: `https://picsum.photos/seed/${seed}/${imgWidth}/${imgHeight}`
+        };
+      }
+    };
+    
+    // Render the app
+    ReactDOM.createRoot(document.getElementById('root')).render(
+      <React.StrictMode>
+        <RouterProvider router={router} />
+      </React.StrictMode>
+    );
+  </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>
+
